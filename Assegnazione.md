@@ -77,7 +77,7 @@ Tutte le funzioni restituiscono valori float da inserire nel campo `value` della
 ### Interfaccia da Riga di Comando
 
 ```
-client [-s server] [-p port] -r "type city"
+./client-project [-s server] [-p port] -r "type city"
 ```
 
 **Parametri:**
@@ -90,28 +90,28 @@ client [-s server] [-p port] -r "type city"
 Il client deve essere eseguibile automaticamente senza interazione dell'utente. L'applicazione esegue una singola richiesta e termina:
 
 ```bash
-client.exe -r "t bari"        # da terminale Windows
-./client -r "h invalid_city"  # da terminale Linux/macOS
-./client -r "x roma"
+client-project.exe -r "t bari"        # da terminale Windows
+./client-project -r "h invalid_city"  # da terminale Linux/macOS
+./client-project -r "x roma"
 ```
 
 ### Esempi di Output
 
 **Richiesta con successo:**
 ```bash
-$ ./client -r "t bari"
+$ ./client-project -r "t bari"
 Ricevuto risultato dal server ip 127.0.0.1. Bari: Temperatura = 22.5°C
 ```
 
 **Città non disponibile:**
 ```bash
-$ ./client -r "h parigi"
+$ ./client-project -r "h parigi"
 Ricevuto risultato dal server ip 127.0.0.1. Città non disponibile
 ```
 
 **Richiesta non valida:**
 ```bash
-$ ./client -r "x roma"
+$ ./client-project -r "x roma"
 Ricevuto risultato dal server ip 127.0.0.1. Richiesta non valida
 ```
 
@@ -140,7 +140,7 @@ Ricevuto risultato dal server ip 127.0.0.1. Richiesta non valida
 ### Interfaccia da Riga di Comando
 
 ```
-server [-p port]
+./server-project [-p port]
 ```
 
 **Parametri:**

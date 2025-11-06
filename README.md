@@ -34,7 +34,7 @@ Il repository è organizzato in due progetti Eclipse CDT separati:
 
 1. Cliccare su "Use this template" in alto a destra su GitHub
 2. Creare un nuovo repository personale
-    - Rinominate il repository sostituendo la parola _template_ con il vostro _cognome_ seguito dalla _matricola_ (`template_esonero_tcp` -> `cognome_12345_esonero_tcp`)
+    - Rinominare il repository sostituendo la parola _template_ con il vostro _cognome_ seguito dalla _matricola_ (`template_esonero_tcp` -> `cognome_12345_esonero_tcp`)
     - Se l'esonero è svolto in coppia, il nome del repository sarà `cognome1_12345_cognome2_6789_esonero_tcp`
 4. Clonare il repository sul proprio computer:
    ```bash

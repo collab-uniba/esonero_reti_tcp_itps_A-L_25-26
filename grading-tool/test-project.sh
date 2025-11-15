@@ -139,17 +139,18 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
                 # Calcola punteggi dai JSON objects
-                # Estrai tutti gli score e somma solo quelli con result PASS
+                # Splitta in linee separate per processare
+                TESTS_LINES=$(echo "$TESTS_JSON_RAW" | sed 's/},{/}\n{/g')
+
+                # Conta e somma score per test PASS
                 while IFS= read -r line; do
-                    # Estrai result e score dallo stesso oggetto JSON
+                    [ -z "$line" ] && continue
+                    score=$(echo "$line" | grep -o '"score":[0-9]*' | cut -d':' -f2)
+                    MAX_SCORE=$((MAX_SCORE + score))
                     if echo "$line" | grep -q '"result":"PASS"'; then
-                        score=$(echo "$line" | grep -o '"score":[0-9]*' | grep -o '[0-9]*')
                         TOTAL_SCORE=$((TOTAL_SCORE + score))
                     fi
-                    # Ogni oggetto contribuisce al max_score
-                    score=$(echo "$line" | grep -o '"score":[0-9]*' | grep -o '[0-9]*')
-                    MAX_SCORE=$((MAX_SCORE + score))
-                done < <(echo "$TESTS_JSON_RAW" | sed 's/},{/}\n{/g')
+                done <<< "$TESTS_LINES"
             fi
         else
             # Test di base manuale

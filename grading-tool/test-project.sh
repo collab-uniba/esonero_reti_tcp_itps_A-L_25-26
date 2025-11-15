@@ -138,11 +138,10 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Calcola punteggi contando direttamente dal file
-                num_tests=$(grep -c '"score":' "$TEST_REPORT" 2>/dev/null || echo "0")
-                num_pass=$(grep -c '"result":"PASS"' "$TEST_REPORT" 2>/dev/null || echo "0")
+                # Calcola punteggi usando wc -l invece di grep -c (più robusto)
+                num_tests=$(grep '"score":' "$TEST_REPORT" | wc -l | tr -d ' ')
+                num_pass=$(grep '"result":"PASS"' "$TEST_REPORT" | wc -l | tr -d ' ')
 
-                # Ogni test vale 1 punto (definito in test-cases.txt)
                 MAX_SCORE=$((MAX_SCORE + num_tests))
                 TOTAL_SCORE=$((TOTAL_SCORE + num_pass))
             fi

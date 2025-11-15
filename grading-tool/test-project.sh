@@ -91,7 +91,8 @@ else
     echo -e "${RED}✗ Client compilation failed${NC}"
     cat "$CLIENT_COMPILE_OUTPUT"
 fi
-CLIENT_WARNINGS=$(grep -c "warning:" "$CLIENT_COMPILE_OUTPUT" 2>/dev/null || echo "0")
+CLIENT_WARNINGS=$(grep -c "warning:" "$CLIENT_COMPILE_OUTPUT" 2>/dev/null | head -1)
+[ -z "$CLIENT_WARNINGS" ] && CLIENT_WARNINGS=0
 
 # 3. Compilazione Server
 echo -e "\n${YELLOW}[3/4]${NC} Compiling server..."
@@ -104,7 +105,8 @@ else
     echo -e "${RED}✗ Server compilation failed${NC}"
     cat "$SERVER_COMPILE_OUTPUT"
 fi
-SERVER_WARNINGS=$(grep -c "warning:" "$SERVER_COMPILE_OUTPUT" 2>/dev/null || echo "0")
+SERVER_WARNINGS=$(grep -c "warning:" "$SERVER_COMPILE_OUTPUT" 2>/dev/null | head -1)
+[ -z "$SERVER_WARNINGS" ] && SERVER_WARNINGS=0
 
 # 4. Test funzionali (solo se entrambe le compilazioni sono OK)
 echo -e "\n${YELLOW}[4/4]${NC} Running functional tests..."
@@ -124,13 +126,26 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
     else
         # Esegui i test usando run-tests.sh se esiste
         if [ -f "$SCRIPT_DIR/run-tests.sh" ]; then
-            # Salva il report dei test in un file temporaneo
+            # Esegui run-tests.sh e cattura output JSON
             TEST_REPORT=$(mktemp)
-            bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT"
+            bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT" 2>&1
 
-            # Leggi i risultati (formato JSON array)
-            if [ -f "$TEST_REPORT" ]; then
-                TEST_RESULTS_JSON=$(cat "$TEST_REPORT")
+            # Leggi il JSON array e parsalo per popolare TEST_RESULTS
+            if [ -f "$TEST_REPORT" ] && [ -s "$TEST_REPORT" ]; then
+                # Leggi ogni oggetto JSON dal array
+                json_content=$(cat "$TEST_REPORT")
+                # Rimuovi [ e ] esterni
+                json_content="${json_content#[}"
+                json_content="${json_content%]}"
+
+                # Split per oggetti JSON (usa newline come separatore temporaneo)
+                # Sostituisci },{ con },\n{ per poter splittare
+                json_content=$(echo "$json_content" | sed 's/},{/},\n{/g')
+
+                # Leggi ogni riga come oggetto JSON
+                while IFS= read -r item; do
+                    [ -n "$item" ] && TEST_RESULTS+=("$item")
+                done <<< "$json_content"
             fi
         else
             # Test di base manuale

@@ -130,22 +130,23 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
             TEST_REPORT=$(mktemp)
             bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT"
 
-            # Leggi il JSON array e parsalo per popolare TEST_RESULTS
+            # Leggi il JSON array e parsalo
             if [ -f "$TEST_REPORT" ] && [ -s "$TEST_REPORT" ]; then
-                # Leggi ogni oggetto JSON dal array
+                # Leggi l'output JSON completo
                 json_content=$(cat "$TEST_REPORT")
-                # Rimuovi [ e ] esterni
-                json_content="${json_content#[}"
-                json_content="${json_content%]}"
+                # Rimuovi [ e ] esterni per ottenere solo il contenuto
+                json_inner="${json_content#[}"
+                json_inner="${json_inner%]}"
 
-                # Split per oggetti JSON (usa newline come separatore temporaneo)
-                # Sostituisci },{ con },\n{ per poter splittare
-                json_content=$(echo "$json_content" | sed 's/},{/},\n{/g')
+                # Split per oggetti JSON per popolare array TEST_RESULTS (per calcolo punteggio)
+                # Sostituisci },{ con }SEPARATOR{
+                temp_json=$(echo "$json_inner" | sed 's/},{/}SEPARATOR{/g')
 
-                # Leggi ogni riga come oggetto JSON
-                while IFS= read -r item; do
+                # Leggi ogni oggetto
+                IFS='SEPARATOR' read -ra ITEMS <<< "$temp_json"
+                for item in "${ITEMS[@]}"; do
                     [ -n "$item" ] && TEST_RESULTS+=("$item")
-                done <<< "$json_content"
+                done
             fi
         else
             # Test di base manuale

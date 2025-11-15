@@ -5,22 +5,14 @@ on:
   workflow_dispatch:
     inputs:
       repos_file_content:
-        description: 'Lista repository studenti (uno per riga)'
-        required: true
+        description: 'Lista repository studenti (uno per riga) - Opzionale se usi STUDENT_REPOS secret'
+        required: false
         type: string
-        default: |
-          https://github.com/student1/esonero-reti.git
-          https://github.com/student2/esonero-reti.git
-
-  # Esecuzione automatica quando viene aggiornato student-repos.txt
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - 'grading-tool/student-repos.txt'
+        default: ''
 
   # Esecuzione schedulata (es. ogni giorno alle 02:00 UTC)
+  # Decommentare per abilitare correzioni automatiche periodiche
+  # Richiede il secret STUDENT_REPOS configurato
   # schedule:
   #   - cron: '0 2 * * *'
 
@@ -41,23 +33,51 @@ jobs:
           chmod +x grading-tool/*.sh
 
       - name: Prepare student repositories list
+        env:
+          STUDENT_REPOS_SECRET: ${{ secrets.STUDENT_REPOS }}
+          MANUAL_INPUT: ${{ github.event.inputs.repos_file_content }}
         run: |
           cd grading-tool
 
-          # Se eseguito manualmente, usa l'input
-          if [ -n "${{ github.event.inputs.repos_file_content }}" ]; then
-            echo "${{ github.event.inputs.repos_file_content }}" > student-repos.txt
-          fi
-
-          # Verifica che il file esista e non sia vuoto
-          if [ ! -f student-repos.txt ]; then
-            echo "Error: student-repos.txt not found"
+          # Priorità: 1) Input manuale, 2) Secret, 3) Errore
+          if [ -n "$MANUAL_INPUT" ]; then
+            echo "📝 Using manually provided repository list"
+            echo "$MANUAL_INPUT" > student-repos.txt
+          elif [ -n "$STUDENT_REPOS_SECRET" ]; then
+            echo "🔐 Using repository list from GitHub Secret"
+            echo "$STUDENT_REPOS_SECRET" > student-repos.txt
+          else
+            echo "❌ Error: No repository list provided!"
+            echo ""
+            echo "Please either:"
+            echo "  1. Provide repository list in workflow input, OR"
+            echo "  2. Create a GitHub Secret named STUDENT_REPOS"
+            echo ""
+            echo "To create the secret:"
+            echo "  Settings → Secrets and variables → Actions → New repository secret"
+            echo "  Name: STUDENT_REPOS"
+            echo "  Value: One repository URL per line"
             exit 1
           fi
 
-          # Mostra i repository da testare
-          echo "Repositories to test:"
-          cat student-repos.txt
+          # Rimuovi linee vuote e commenti
+          grep -v '^[[:space:]]*$' student-repos.txt | grep -v '^#' > student-repos-clean.txt || true
+          mv student-repos-clean.txt student-repos.txt
+
+          # Verifica che ci siano repository da testare
+          if [ ! -s student-repos.txt ]; then
+            echo "❌ Error: Repository list is empty"
+            exit 1
+          fi
+
+          # Mostra i repository da testare (solo i primi 5 per privacy)
+          echo "📦 Repositories to test:"
+          head -5 student-repos.txt
+          TOTAL=$(wc -l < student-repos.txt | tr -d ' ')
+          if [ $TOTAL -gt 5 ]; then
+            echo "... and $((TOTAL - 5)) more"
+          fi
+          echo "Total: $TOTAL repositories"
 
       - name: Run grading
         id: grading

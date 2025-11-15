@@ -73,39 +73,42 @@ cat reports/student_id.json | python -m json.tool
 
 ### Opzione 2: GitHub Actions (Automatizzato)
 
-#### 1. Setup iniziale
+> **⚠️ IMPORTANTE:** Il file `student-repos.txt` è nel `.gitignore` per proteggere la privacy.
+> Per GitHub Actions, devi configurare un **GitHub Secret** o fornire input manuale.
+>
+> **📖 Leggi la guida completa:** [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md)
 
-```bash
-# Copia la directory grading-tool nel tuo repository di correzione
-cp -r grading-tool /path/to/your/correction-repo/
+#### 1. Setup iniziale (una tantum - 3 minuti)
 
-# Commit e push
-cd /path/to/your/correction-repo
-git add grading-tool/
-git commit -m "Add auto-grading system"
-git push
-```
+**Configurazione GitHub Secret (consigliata):**
 
-#### 2. Esecuzione manuale
+1. Vai su **Settings** → **Secrets and variables** → **Actions**
+2. Click **"New repository secret"**
+3. **Name:** `STUDENT_REPOS`
+4. **Value:** Lista repository (uno per riga)
+   ```
+   https://github.com/student1/esonero-reti.git
+   https://github.com/student2/esonero-reti.git
+   ```
+5. Click **"Add secret"**
+
+✅ **Fatto!** Ora puoi eseguire il workflow automaticamente.
+
+#### 2. Esecuzione con Secret (automatica)
 
 1. Vai su GitHub → **Actions** → **Auto Grade Student Projects**
-2. Click su **Run workflow**
-3. Incolla la lista dei repository (uno per riga)
-4. Click su **Run workflow**
+2. Click **"Run workflow"**
+3. **Lascia il campo input VUOTO** (userà il secret)
+4. Click **"Run workflow"**
 
-#### 3. Esecuzione automatica
+#### 3. Esecuzione con Input Manuale (alternativa)
 
-Modifica `student-repos.txt` e committa:
+1. Vai su GitHub → **Actions** → **Auto Grade Student Projects**
+2. Click **"Run workflow"**
+3. **Incolla la lista** nel campo "Lista repository studenti"
+4. Click **"Run workflow"**
 
-```bash
-# Aggiungi repository
-echo "https://github.com/student1/repo.git" >> grading-tool/student-repos.txt
-
-# Commit - il workflow partirà automaticamente
-git add grading-tool/student-repos.txt
-git commit -m "Add student1 repository"
-git push
-```
+> **💡 Tip:** Usa input manuale per test rapidi, secret per correzioni complete
 
 #### 4. Scarica i report
 
@@ -206,6 +209,22 @@ Report visuale con:
 - Indicatori visivi colorati
 
 ## 🔧 Troubleshooting
+
+### GitHub Actions non trova student-repos.txt
+
+**Problema:** Il workflow fallisce con "Error: student-repos.txt not found"
+
+**Causa:** Il file è nel `.gitignore` per privacy e non viene committato
+
+**Soluzione:** Configura un GitHub Secret o usa input manuale
+
+📖 **Guida completa:** [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md)
+
+**Quick fix:**
+1. Settings → Secrets → New secret
+2. Name: `STUDENT_REPOS`
+3. Value: lista repository (uno per riga)
+4. Actions → Run workflow (lascia input vuoto)
 
 ### Il server non si avvia durante i test
 

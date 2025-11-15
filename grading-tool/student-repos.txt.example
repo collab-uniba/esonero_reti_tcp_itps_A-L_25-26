@@ -1,0 +1,20 @@
+################################################################################
+# Student Repositories List
+#
+# Aggiungi un repository per riga (URL completo)
+# Linee vuote e linee che iniziano con # sono ignorate
+################################################################################
+
+# Esempio di repository pubblici GitHub
+https://github.com/username1/esonero-reti-tcp.git
+https://github.com/username2/lab-reti-2025.git
+https://github.com/username3/tcp-weather-service.git
+
+# Puoi anche usare repository privati se hai accesso
+# https://github.com/org/private-repo.git
+
+# Supporta anche GitLab, Bitbucket, ecc.
+# https://gitlab.com/username/project.git
+
+# Per testare con questo stesso repo (template)
+# https://github.com/tuousername/esonero_reti_tcp_itps_A-L_25-26.git

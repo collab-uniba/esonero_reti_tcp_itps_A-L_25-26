@@ -1,0 +1,177 @@
+name: Auto Grade Student Projects
+
+on:
+  # Esecuzione manuale con lista repository
+  workflow_dispatch:
+    inputs:
+      repos_file_content:
+        description: 'Lista repository studenti (uno per riga)'
+        required: true
+        type: string
+        default: |
+          https://github.com/student1/esonero-reti.git
+          https://github.com/student2/esonero-reti.git
+
+  # Esecuzione automatica quando viene aggiornato student-repos.txt
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'grading-tool/student-repos.txt'
+
+  # Esecuzione schedulata (es. ogni giorno alle 02:00 UTC)
+  # schedule:
+  #   - cron: '0 2 * * *'
+
+jobs:
+  grade-projects:
+    name: Grade All Student Projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Timeout totale per tutti i progetti
+
+    steps:
+      - name: Checkout grading tool
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make bc
+          chmod +x grading-tool/*.sh
+
+      - name: Prepare student repositories list
+        run: |
+          cd grading-tool
+
+          # Se eseguito manualmente, usa l'input
+          if [ -n "${{ github.event.inputs.repos_file_content }}" ]; then
+            echo "${{ github.event.inputs.repos_file_content }}" > student-repos.txt
+          fi
+
+          # Verifica che il file esista e non sia vuoto
+          if [ ! -f student-repos.txt ]; then
+            echo "Error: student-repos.txt not found"
+            exit 1
+          fi
+
+          # Mostra i repository da testare
+          echo "Repositories to test:"
+          cat student-repos.txt
+
+      - name: Run grading
+        id: grading
+        run: |
+          cd grading-tool
+          ./grade-all.sh student-repos.txt 2>&1 | tee grading.log
+
+      - name: Generate summary
+        if: always()
+        run: |
+          cd grading-tool
+
+          if [ -f reports/aggregate-report.csv ]; then
+            echo "## 📊 Grading Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Estrai statistiche dal CSV
+            TOTAL=$(tail -n +2 reports/aggregate-report.csv | wc -l)
+            PASSED=$(tail -n +2 reports/aggregate-report.csv | awk -F',' '$4=="OK" && $5=="OK"' | wc -l)
+
+            echo "- **Total projects tested:** $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "- **Successfully compiled:** $PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Mostra tabella risultati (primi 20)
+            echo "### Top Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Student | Client | Server | Tests | Score | %" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|--------|--------|-------|-------|------|" >> $GITHUB_STEP_SUMMARY
+
+            tail -n +2 reports/aggregate-report.csv | head -20 | while IFS=',' read -r student repo clone client server cw sw tp tt score maxscore perc rest; do
+              echo "| $student | $client | $server | $tp/$tt | $score/$maxscore | $perc% |" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full reports available in artifacts." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No reports generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload individual reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: individual-reports
+          path: grading-tool/reports/*.json
+          retention-days: 30
+
+      - name: Upload aggregate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aggregate-reports
+          path: |
+            grading-tool/reports/aggregate-report.csv
+            grading-tool/reports/aggregate-report.html
+          retention-days: 90
+
+      - name: Upload grading logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grading-logs
+          path: |
+            grading-tool/grading.log
+            grading-tool/temp/**/*.log
+          retention-days: 7
+
+      - name: Comment on commit (if push event)
+        if: github.event_name == 'push' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            if (!fs.existsSync('grading-tool/reports/aggregate-report.csv')) {
+              return;
+            }
+
+            const csv = fs.readFileSync('grading-tool/reports/aggregate-report.csv', 'utf8');
+            const lines = csv.split('\n').filter(l => l.trim());
+            const total = lines.length - 1; // Escludi header
+
+            let passed = 0;
+            for (let i = 1; i < lines.length; i++) {
+              const cols = lines[i].split(',');
+              if (cols[3] === 'OK' && cols[4] === 'OK') passed++;
+            }
+
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = `## 🤖 Auto-Grading Results\n\n` +
+                         `- **Total projects:** ${total}\n` +
+                         `- **Successfully compiled:** ${passed} (${Math.round(passed/total*100)}%)\n\n` +
+                         `[View detailed reports](${runUrl})\n`;
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: body
+            });
+
+      - name: Fail if major issues
+        if: always()
+        run: |
+          cd grading-tool
+
+          # Conta quanti progetti hanno fallito il clone
+          if [ -f reports/aggregate-report.csv ]; then
+            FAILED_CLONE=$(tail -n +2 reports/aggregate-report.csv | awk -F',' '$3!="OK"' | wc -l)
+
+            if [ $FAILED_CLONE -gt 0 ]; then
+              echo "⚠️ Warning: $FAILED_CLONE projects failed to clone"
+              # Non fallire il workflow per problemi di clone
+            fi
+          fi

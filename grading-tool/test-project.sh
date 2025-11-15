@@ -138,16 +138,13 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Calcola punteggi dai JSON objects
-                # Conta tutti gli score (tutti i test contribuiscono al max_score)
-                for score_val in $(echo "$json_content" | grep -o '"score":[0-9]*' | cut -d':' -f2); do
-                    MAX_SCORE=$((MAX_SCORE + score_val))
-                done
+                # Calcola punteggi contando direttamente dal file
+                num_tests=$(grep -c '"score":' "$TEST_REPORT" 2>/dev/null || echo "0")
+                num_pass=$(grep -c '"result":"PASS"' "$TEST_REPORT" 2>/dev/null || echo "0")
 
-                # Conta i test PASS e somma i loro score
-                # Assumendo che ogni test vale 1 punto (come definito in test-cases.txt)
-                pass_count=$(echo "$json_content" | grep -o '"result":"PASS"' | wc -l | tr -d ' ')
-                TOTAL_SCORE=$((TOTAL_SCORE + pass_count))
+                # Ogni test vale 1 punto (definito in test-cases.txt)
+                MAX_SCORE=$((MAX_SCORE + num_tests))
+                TOTAL_SCORE=$((TOTAL_SCORE + num_pass))
             fi
         else
             # Test di base manuale

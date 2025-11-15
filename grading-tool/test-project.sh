@@ -137,23 +137,13 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Conta semplicemente le occorrenze di "score": (= numero di test)
-                # e "PASS" (= numero di test passati)
-                num_tests=0
-                num_pass=0
+                # Conta i test usando jq
+                num_tests=$(jq 'length' "$TEST_REPORT")
+                num_pass=$(jq '[.[] | select(.result == "PASS")] | length' "$TEST_REPORT")
 
-                # Conta score nel contenuto JSON
-                while read -r line; do
-                    [ -n "$line" ] && num_tests=$((num_tests + 1))
-                done < <(echo "$json_content" | grep -o '"score":[0-9]*')
-
-                # Conta PASS nel contenuto JSON
-                while read -r line; do
-                    [ -n "$line" ] && num_pass=$((num_pass + 1))
-                done < <(echo "$json_content" | grep -o '"result":"PASS"')
-
-                MAX_SCORE=$((MAX_SCORE + num_tests))
-                TOTAL_SCORE=$((TOTAL_SCORE + num_pass))
+                # Aggiungi ai punteggi di compilazione (calcolati dopo)
+                TEST_SCORE_MAX=$num_tests
+                TEST_SCORE_TOTAL=$num_pass
             fi
         else
             # Test di base manuale
@@ -214,11 +204,18 @@ fi
 MAX_SCORE=$((MAX_SCORE + 4))
 
 # Punteggio test
-for test in "${TEST_RESULTS[@]}"; do
-    score=$(echo "$test" | grep -o '"score":[0-9]*' | cut -d':' -f2)
-    TOTAL_SCORE=$((TOTAL_SCORE + score))
-    MAX_SCORE=$((MAX_SCORE + 1))
-done
+# Se abbiamo usato run-tests.sh con jq, usa quei risultati
+if [ -n "${TEST_SCORE_MAX:-}" ]; then
+    MAX_SCORE=$((MAX_SCORE + TEST_SCORE_MAX))
+    TOTAL_SCORE=$((TOTAL_SCORE + TEST_SCORE_TOTAL))
+else
+    # Altrimenti usa TEST_RESULTS array (test manuali)
+    for test in "${TEST_RESULTS[@]}"; do
+        score=$(echo "$test" | grep -o '"score":[0-9]*' | cut -d':' -f2)
+        TOTAL_SCORE=$((TOTAL_SCORE + score))
+        MAX_SCORE=$((MAX_SCORE + 1))
+    done
+fi
 
 # 6. Genera report JSON
 # Se abbiamo usato run-tests.sh, usa il JSON raw

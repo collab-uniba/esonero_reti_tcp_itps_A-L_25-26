@@ -64,7 +64,8 @@ if [ ! -f "$TEST_CASES_FILE" ]; then
 
 else
     # Leggi test cases da file
-    while IFS='|' read -r test_name request_type request_city expected_pattern points; do
+    # || [ -n "$test_name" ] gestisce l'ultima riga anche senza newline finale
+    while IFS='|' read -r test_name request_type request_city expected_pattern points || [ -n "$test_name" ]; do
         # Salta linee vuote e commenti
         [[ -z "$test_name" || "$test_name" =~ ^#.*$ ]] && continue
 

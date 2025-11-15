@@ -44,23 +44,23 @@ for json_file in "$REPORT_DIR"/*.json; do
 
     TOTAL_STUDENTS=$((TOTAL_STUDENTS + 1))
 
-    # Estrai dati usando grep e sed (più portabile di jq)
-    student_id=$(grep -o '"student_id": *"[^"]*"' "$json_file" | sed 's/"student_id": *"\([^"]*\)"/\1/')
-    repository=$(grep -o '"repository": *"[^"]*"' "$json_file" | sed 's/"repository": *"\([^"]*\)"/\1/')
-    clone_status=$(grep -o '"clone_status": *"[^"]*"' "$json_file" | sed 's/"clone_status": *"\([^"]*\)"/\1/')
-    comp_client=$(grep -o '"compilation_client": *"[^"]*"' "$json_file" | sed 's/"compilation_client": *"\([^"]*\)"/\1/')
-    comp_server=$(grep -o '"compilation_server": *"[^"]*"' "$json_file" | sed 's/"compilation_server": *"\([^"]*\)"/\1/')
-    client_warn=$(grep -o '"client_warnings": *[0-9]*' "$json_file" | sed 's/"client_warnings": *\([0-9]*\)/\1/' || echo "0")
-    server_warn=$(grep -o '"server_warnings": *[0-9]*' "$json_file" | sed 's/"server_warnings": *\([0-9]*\)/\1/' || echo "0")
-    total_score=$(grep -o '"total_score": *[0-9]*' "$json_file" | sed 's/"total_score": *\([0-9]*\)/\1/')
-    max_score=$(grep -o '"max_score": *[0-9]*' "$json_file" | sed 's/"max_score": *\([0-9]*\)/\1/')
-    percentage=$(grep -o '"percentage": *[0-9.]*' "$json_file" | sed 's/"percentage": *\([0-9.]*\)/\1/')
-    duration=$(grep -o '"duration_seconds": *[0-9]*' "$json_file" | sed 's/"duration_seconds": *\([0-9]*\)/\1/')
-    timestamp=$(grep -o '"timestamp": *"[^"]*"' "$json_file" | sed 's/"timestamp": *"\([^"]*\)"/\1/')
+    # Estrai dati usando jq (robusto e affidabile)
+    student_id=$(jq -r '.student_id' "$json_file")
+    repository=$(jq -r '.repository' "$json_file")
+    clone_status=$(jq -r '.clone_status' "$json_file")
+    comp_client=$(jq -r '.compilation_client' "$json_file")
+    comp_server=$(jq -r '.compilation_server' "$json_file")
+    client_warn=$(jq -r '.client_warnings // 0' "$json_file")
+    server_warn=$(jq -r '.server_warnings // 0' "$json_file")
+    total_score=$(jq -r '.total_score' "$json_file")
+    max_score=$(jq -r '.max_score' "$json_file")
+    percentage=$(jq -r '.percentage' "$json_file")
+    duration=$(jq -r '.duration_seconds' "$json_file")
+    timestamp=$(jq -r '.timestamp' "$json_file")
 
-    # Conta test passati
-    tests_passed=$(grep -o '"result": *"PASS"' "$json_file" | wc -l | tr -d ' ')
-    tests_total=$(grep -o '"result":' "$json_file" | wc -l | tr -d ' ')
+    # Conta test passati usando jq
+    tests_passed=$(jq '[.tests[] | select(.result == "PASS")] | length' "$json_file")
+    tests_total=$(jq '.tests | length' "$json_file")
 
     # Statistiche
     if [ "$comp_client" == "OK" ] && [ "$comp_server" == "OK" ]; then
@@ -254,7 +254,8 @@ EOF
 
 # Genera righe tabella HTML
 TABLE_ROWS=""
-while IFS=, read -r student_id repository clone_status comp_client comp_server client_warn server_warn tests_passed tests_total total_score max_score percentage duration timestamp; do
+# || [ -n "$student_id" ] gestisce l'ultima riga anche senza newline finale
+while IFS=, read -r student_id repository clone_status comp_client comp_server client_warn server_warn tests_passed tests_total total_score max_score percentage duration timestamp || [ -n "$student_id" ]; do
     # Salta header
     [ "$student_id" == "Student ID" ] && continue
 

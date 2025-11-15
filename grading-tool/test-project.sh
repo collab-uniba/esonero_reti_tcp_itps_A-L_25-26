@@ -51,6 +51,7 @@ COMPILATION_CLIENT="FAIL"
 COMPILATION_SERVER="FAIL"
 CLONE_STATUS="FAIL"
 declare -a TEST_RESULTS=()
+TESTS_JSON_RAW=""
 START_TIME=$(date +%s)
 
 # 1. Clone repository
@@ -130,23 +131,25 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
             TEST_REPORT=$(mktemp)
             bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT"
 
-            # Leggi il JSON array e parsalo
+            # Leggi il JSON array completo
             if [ -f "$TEST_REPORT" ] && [ -s "$TEST_REPORT" ]; then
-                # Leggi l'output JSON completo
+                # Salva il contenuto JSON raw (senza [ e ])
                 json_content=$(cat "$TEST_REPORT")
-                # Rimuovi [ e ] esterni per ottenere solo il contenuto
-                json_inner="${json_content#[}"
-                json_inner="${json_inner%]}"
+                TESTS_JSON_RAW="${json_content#[}"
+                TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Split per oggetti JSON per popolare array TEST_RESULTS (per calcolo punteggio)
-                # Sostituisci },{ con }SEPARATOR{
-                temp_json=$(echo "$json_inner" | sed 's/},{/}SEPARATOR{/g')
-
-                # Leggi ogni oggetto
-                IFS='SEPARATOR' read -ra ITEMS <<< "$temp_json"
-                for item in "${ITEMS[@]}"; do
-                    [ -n "$item" ] && TEST_RESULTS+=("$item")
-                done
+                # Calcola punteggi dai JSON objects
+                # Estrai tutti gli score e somma solo quelli con result PASS
+                while IFS= read -r line; do
+                    # Estrai result e score dallo stesso oggetto JSON
+                    if echo "$line" | grep -q '"result":"PASS"'; then
+                        score=$(echo "$line" | grep -o '"score":[0-9]*' | grep -o '[0-9]*')
+                        TOTAL_SCORE=$((TOTAL_SCORE + score))
+                    fi
+                    # Ogni oggetto contribuisce al max_score
+                    score=$(echo "$line" | grep -o '"score":[0-9]*' | grep -o '[0-9]*')
+                    MAX_SCORE=$((MAX_SCORE + score))
+                done < <(echo "$TESTS_JSON_RAW" | sed 's/},{/}\n{/g')
             fi
         else
             # Test di base manuale
@@ -214,9 +217,14 @@ for test in "${TEST_RESULTS[@]}"; do
 done
 
 # 6. Genera report JSON
-TESTS_JSON=""
-if [ ${#TEST_RESULTS[@]} -gt 0 ]; then
+# Se abbiamo usato run-tests.sh, usa il JSON raw
+# Altrimenti costruisci da TEST_RESULTS array
+if [ -n "$TESTS_JSON_RAW" ]; then
+    TESTS_JSON="$TESTS_JSON_RAW"
+elif [ ${#TEST_RESULTS[@]} -gt 0 ]; then
     TESTS_JSON=$(IFS=','; echo "${TEST_RESULTS[*]}")
+else
+    TESTS_JSON=""
 fi
 
 END_TIME=$(date +%s)

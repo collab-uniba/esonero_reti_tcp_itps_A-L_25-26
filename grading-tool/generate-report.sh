@@ -292,14 +292,18 @@ while IFS=, read -r student_id repository clone_status comp_client comp_server c
     TABLE_ROWS+="</tr>"
 done < "$CSV_FILE"
 
-# Calcola statistiche
+# Calcola statistiche (compatibile macOS e Linux)
 AVG_SCORE=0
 AVG_PERCENTAGE=0
 COMPILE_PERCENTAGE=0
+MAX_SCORE_AVG=0
 if [ $TOTAL_STUDENTS -gt 0 ]; then
-    AVG_SCORE=$(awk "BEGIN {printf \"%.1f\", $TOTAL_SCORE_SUM/$TOTAL_STUDENTS}")
-    AVG_PERCENTAGE=$(awk "BEGIN {printf \"%.1f\", ($TOTAL_SCORE_SUM*100)/($TOTAL_MAX_SCORE_SUM)}")
-    COMPILE_PERCENTAGE=$(awk "BEGIN {printf \"%.0f\", ($TOTAL_PASSED_COMPILE*100)/$TOTAL_STUDENTS}")
+    AVG_SCORE=$(echo "scale=1; $TOTAL_SCORE_SUM / $TOTAL_STUDENTS" | bc)
+    COMPILE_PERCENTAGE=$(echo "scale=0; $TOTAL_PASSED_COMPILE * 100 / $TOTAL_STUDENTS" | bc)
+    MAX_SCORE_AVG=$(echo "scale=0; $TOTAL_MAX_SCORE_SUM / $TOTAL_STUDENTS" | bc)
+fi
+if [ $TOTAL_MAX_SCORE_SUM -gt 0 ]; then
+    AVG_PERCENTAGE=$(echo "scale=1; $TOTAL_SCORE_SUM * 100 / $TOTAL_MAX_SCORE_SUM" | bc)
 fi
 
 # Sostituisci placeholder
@@ -307,7 +311,7 @@ sed -i.bak "s|__TOTAL_STUDENTS__|$TOTAL_STUDENTS|g" "$HTML_FILE"
 sed -i.bak "s|__TOTAL_PASSED_COMPILE__|$TOTAL_PASSED_COMPILE|g" "$HTML_FILE"
 sed -i.bak "s|__COMPILE_PERCENTAGE__|$COMPILE_PERCENTAGE|g" "$HTML_FILE"
 sed -i.bak "s|__AVG_SCORE__|$AVG_SCORE|g" "$HTML_FILE"
-sed -i.bak "s|__MAX_SCORE__|$(awk "BEGIN {printf \"%.0f\", $TOTAL_MAX_SCORE_SUM/$TOTAL_STUDENTS}")|g" "$HTML_FILE"
+sed -i.bak "s|__MAX_SCORE__|$MAX_SCORE_AVG|g" "$HTML_FILE"
 sed -i.bak "s|__AVG_PERCENTAGE__|$AVG_PERCENTAGE|g" "$HTML_FILE"
 sed -i.bak "s|__TABLE_ROWS__|$TABLE_ROWS|g" "$HTML_FILE"
 sed -i.bak "s|__GENERATION_DATE__|$(date)|g" "$HTML_FILE"

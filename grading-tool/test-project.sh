@@ -198,13 +198,20 @@ for test in "${TEST_RESULTS[@]}"; do
 done
 
 # 6. Genera report JSON
-TESTS_JSON=$(printf '%s\n' "${TEST_RESULTS[@]}" | paste -sd ',' || echo "")
-if [ -z "$TESTS_JSON" ]; then
-    TESTS_JSON=""
+TESTS_JSON=""
+if [ ${#TEST_RESULTS[@]} -gt 0 ]; then
+    TESTS_JSON=$(IFS=','; echo "${TEST_RESULTS[*]}")
 fi
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
+
+# Calcola percentuale (compatibile macOS e Linux)
+if [ $MAX_SCORE -gt 0 ]; then
+    PERCENTAGE=$(echo "scale=1; $TOTAL_SCORE * 100 / $MAX_SCORE" | bc)
+else
+    PERCENTAGE="0.0"
+fi
 
 cat > "$REPORT_DIR/$STUDENT_ID.json" <<EOF
 {
@@ -219,13 +226,13 @@ cat > "$REPORT_DIR/$STUDENT_ID.json" <<EOF
   "tests": [$TESTS_JSON],
   "total_score": $TOTAL_SCORE,
   "max_score": $MAX_SCORE,
-  "percentage": $(awk "BEGIN {printf \"%.1f\", ($TOTAL_SCORE/$MAX_SCORE)*100}"),
+  "percentage": $PERCENTAGE,
   "duration_seconds": $DURATION
 }
 EOF
 
 echo -e "\n${YELLOW}========================================${NC}"
-echo -e "${GREEN}Score: $TOTAL_SCORE/$MAX_SCORE ($(awk "BEGIN {printf \"%.1f\", ($TOTAL_SCORE/$MAX_SCORE)*100}")%)${NC}"
+echo -e "${GREEN}Score: $TOTAL_SCORE/$MAX_SCORE ($PERCENTAGE%)${NC}"
 echo -e "${YELLOW}Report saved: $REPORT_DIR/$STUDENT_ID.json${NC}"
 echo -e "${YELLOW}========================================${NC}"
 

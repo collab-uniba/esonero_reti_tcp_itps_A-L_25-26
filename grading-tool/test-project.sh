@@ -133,14 +133,13 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
 
             # Leggi il JSON array completo
             if [ -f "$TEST_REPORT" ] && [ -s "$TEST_REPORT" ]; then
-                # Salva il contenuto JSON raw (senza [ e ])
                 json_content=$(cat "$TEST_REPORT")
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Calcola punteggi usando wc -l invece di grep -c (più robusto)
-                num_tests=$(grep '"score":' "$TEST_REPORT" | wc -l | tr -d ' ')
-                num_pass=$(grep '"result":"PASS"' "$TEST_REPORT" | wc -l | tr -d ' ')
+                # Calcola punteggi da json_content invece del file
+                num_tests=$(echo "$json_content" | grep -o '"score":' | wc -l | tr -d ' ')
+                num_pass=$(echo "$json_content" | grep -o '"result":"PASS"' | wc -l | tr -d ' ')
 
                 MAX_SCORE=$((MAX_SCORE + num_tests))
                 TOTAL_SCORE=$((TOTAL_SCORE + num_pass))

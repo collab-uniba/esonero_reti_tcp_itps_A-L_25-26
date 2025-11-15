@@ -137,9 +137,15 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Calcola punteggi: splitta su virgole per separare campi JSON, poi conta
-                num_tests=$(cat "$TEST_REPORT" | tr ',' '\n' | grep -c '"score":')
-                num_pass=$(cat "$TEST_REPORT" | tr ',' '\n' | grep -c '"result":"PASS"')
+                # Usa jq se disponibile, altrimenti fallback
+                if command -v jq >/dev/null 2>&1; then
+                    num_tests=$(jq 'length' "$TEST_REPORT")
+                    num_pass=$(jq '[.[] | select(.result=="PASS")] | length' "$TEST_REPORT")
+                else
+                    # Fallback senza jq
+                    num_tests=$(grep -o '{"name":' "$TEST_REPORT" | wc -l | tr -d ' ')
+                    num_pass=$(grep -o '"result":"PASS"' "$TEST_REPORT" | wc -l | tr -d ' ')
+                fi
 
                 MAX_SCORE=$((MAX_SCORE + num_tests))
                 TOTAL_SCORE=$((TOTAL_SCORE + num_pass))

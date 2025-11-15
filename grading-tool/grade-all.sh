@@ -87,7 +87,8 @@ test_repository() {
 }
 
 # Esegui test per ogni repository
-while IFS= read -r repo_url; do
+# || [ -n "$repo_url" ] gestisce l'ultima riga anche senza newline finale
+while IFS= read -r repo_url || [ -n "$repo_url" ]; do
     # Salta linee vuote e commenti
     [[ -z "$repo_url" || "$repo_url" =~ ^#.*$ ]] && continue
 

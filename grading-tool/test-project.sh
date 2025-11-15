@@ -137,15 +137,20 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
                 TESTS_JSON_RAW="${json_content#[}"
                 TESTS_JSON_RAW="${TESTS_JSON_RAW%]}"
 
-                # Usa jq se disponibile, altrimenti fallback
-                if command -v jq >/dev/null 2>&1; then
-                    num_tests=$(jq 'length' "$TEST_REPORT")
-                    num_pass=$(jq '[.[] | select(.result=="PASS")] | length' "$TEST_REPORT")
-                else
-                    # Fallback senza jq
-                    num_tests=$(grep -o '{"name":' "$TEST_REPORT" | wc -l | tr -d ' ')
-                    num_pass=$(grep -o '"result":"PASS"' "$TEST_REPORT" | wc -l | tr -d ' ')
-                fi
+                # Conta semplicemente le occorrenze di "score": (= numero di test)
+                # e "PASS" (= numero di test passati)
+                num_tests=0
+                num_pass=0
+
+                # Conta score nel contenuto JSON
+                while read -r line; do
+                    [ -n "$line" ] && num_tests=$((num_tests + 1))
+                done < <(echo "$json_content" | grep -o '"score":[0-9]*')
+
+                # Conta PASS nel contenuto JSON
+                while read -r line; do
+                    [ -n "$line" ] && num_pass=$((num_pass + 1))
+                done < <(echo "$json_content" | grep -o '"result":"PASS"')
 
                 MAX_SCORE=$((MAX_SCORE + num_tests))
                 TOTAL_SCORE=$((TOTAL_SCORE + num_pass))

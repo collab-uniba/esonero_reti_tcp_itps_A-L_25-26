@@ -1,0 +1,49 @@
+################################################################################
+# Test Cases Configuration
+#
+# Format: test_name | type | city | expected_pattern | points
+#
+# - test_name: Nome descrittivo del test
+# - type: Tipo di richiesta (t, h, w, p, x per invalido)
+# - city: Nome della città
+# - expected_pattern: Stringa attesa nell'output del client
+# - points: Punti assegnati se il test passa
+#
+# Linee vuote e linee che iniziano con # sono ignorate
+################################################################################
+
+# Test richieste valide - Temperatura
+valid_temp_bari       | t | bari    | Temperatura = | 1
+valid_temp_roma       | t | roma    | Temperatura = | 1
+valid_temp_milano     | t | milano  | Temperatura = | 1
+
+# Test richieste valide - Umidità
+valid_humid_napoli    | h | napoli  | Umidità =     | 1
+valid_humid_torino    | h | torino  | Umidità =     | 1
+
+# Test richieste valide - Vento
+valid_wind_palermo    | w | palermo | Vento =       | 1
+valid_wind_genova     | w | genova  | Vento =       | 1
+
+# Test richieste valide - Pressione
+valid_press_bologna   | p | bologna | Pressione =   | 1
+valid_press_firenze   | p | firenze | Pressione =   | 1
+valid_press_venezia   | p | venezia | Pressione =   | 1
+
+# Test città non valide
+invalid_city_parigi   | t | parigi        | Città non disponibile | 1
+invalid_city_londra   | h | londra        | Città non disponibile | 1
+invalid_city_berlino  | w | berlino       | Città non disponibile | 1
+invalid_city_madrid   | p | madrid        | Città non disponibile | 1
+
+# Test tipi di richiesta non validi
+invalid_type_x        | x | roma    | Richiesta non valida | 1
+invalid_type_z        | z | milano  | Richiesta non valida | 1
+invalid_type_9        | 9 | bari    | Richiesta non valida | 1
+
+# Test case insensitive
+case_insensitive_upper | t | ROMA   | Temperatura = | 1
+case_insensitive_mixed | h | MiLaNo | Umidità =     | 1
+
+# Test città con spazi (se implementato)
+# city_with_space      | p | Reggio Calabria | Pressione = | 1

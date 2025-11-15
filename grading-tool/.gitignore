@@ -1,0 +1,22 @@
+# Temporary files
+temp/
+*.log
+
+# Generated reports
+reports/
+
+# Student repository list (contiene dati sensibili)
+student-repos.txt
+
+# Backup files
+*.bak
+*~
+
+# macOS
+.DS_Store
+
+# Editor files
+*.swp
+*.swo
+.vscode/
+.idea/

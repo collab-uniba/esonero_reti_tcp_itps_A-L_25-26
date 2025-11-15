@@ -126,9 +126,9 @@ if [ "$COMPILATION_CLIENT" == "OK" ] && [ "$COMPILATION_SERVER" == "OK" ]; then
     else
         # Esegui i test usando run-tests.sh se esiste
         if [ -f "$SCRIPT_DIR/run-tests.sh" ]; then
-            # Esegui run-tests.sh e cattura output JSON
+            # Esegui run-tests.sh: stderr va a console (messaggi colorati), stdout va a file (JSON)
             TEST_REPORT=$(mktemp)
-            bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT" 2>&1
+            bash "$SCRIPT_DIR/run-tests.sh" "$WORK_DIR" $SERVER_PORT > "$TEST_REPORT"
 
             # Leggi il JSON array e parsalo per popolare TEST_RESULTS
             if [ -f "$TEST_REPORT" ] && [ -s "$TEST_REPORT" ]; then

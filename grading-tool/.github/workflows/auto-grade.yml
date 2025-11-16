@@ -1,0 +1,197 @@
+name: Auto Grade Student Projects
+
+on:
+  # Esecuzione manuale con lista repository
+  workflow_dispatch:
+    inputs:
+      repos_file_content:
+        description: 'Lista repository studenti (uno per riga) - Opzionale se usi STUDENT_REPOS secret'
+        required: false
+        type: string
+        default: ''
+
+  # Esecuzione schedulata (es. ogni giorno alle 02:00 UTC)
+  # Decommentare per abilitare correzioni automatiche periodiche
+  # Richiede il secret STUDENT_REPOS configurato
+  # schedule:
+  #   - cron: '0 2 * * *'
+
+jobs:
+  grade-projects:
+    name: Grade All Student Projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Timeout totale per tutti i progetti
+
+    steps:
+      - name: Checkout grading tool
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make bc
+          chmod +x grading-tool/*.sh
+
+      - name: Prepare student repositories list
+        env:
+          STUDENT_REPOS_SECRET: ${{ secrets.STUDENT_REPOS }}
+          MANUAL_INPUT: ${{ github.event.inputs.repos_file_content }}
+        run: |
+          cd grading-tool
+
+          # Priorità: 1) Input manuale, 2) Secret, 3) Errore
+          if [ -n "$MANUAL_INPUT" ]; then
+            echo "📝 Using manually provided repository list"
+            echo "$MANUAL_INPUT" > student-repos.txt
+          elif [ -n "$STUDENT_REPOS_SECRET" ]; then
+            echo "🔐 Using repository list from GitHub Secret"
+            echo "$STUDENT_REPOS_SECRET" > student-repos.txt
+          else
+            echo "❌ Error: No repository list provided!"
+            echo ""
+            echo "Please either:"
+            echo "  1. Provide repository list in workflow input, OR"
+            echo "  2. Create a GitHub Secret named STUDENT_REPOS"
+            echo ""
+            echo "To create the secret:"
+            echo "  Settings → Secrets and variables → Actions → New repository secret"
+            echo "  Name: STUDENT_REPOS"
+            echo "  Value: One repository URL per line"
+            exit 1
+          fi
+
+          # Rimuovi linee vuote e commenti
+          grep -v '^[[:space:]]*$' student-repos.txt | grep -v '^#' > student-repos-clean.txt || true
+          mv student-repos-clean.txt student-repos.txt
+
+          # Verifica che ci siano repository da testare
+          if [ ! -s student-repos.txt ]; then
+            echo "❌ Error: Repository list is empty"
+            exit 1
+          fi
+
+          # Mostra i repository da testare (solo i primi 5 per privacy)
+          echo "📦 Repositories to test:"
+          head -5 student-repos.txt
+          TOTAL=$(wc -l < student-repos.txt | tr -d ' ')
+          if [ $TOTAL -gt 5 ]; then
+            echo "... and $((TOTAL - 5)) more"
+          fi
+          echo "Total: $TOTAL repositories"
+
+      - name: Run grading
+        id: grading
+        run: |
+          cd grading-tool
+          ./grade-all.sh student-repos.txt 2>&1 | tee grading.log
+
+      - name: Generate summary
+        if: always()
+        run: |
+          cd grading-tool
+
+          if [ -f reports/aggregate-report.csv ]; then
+            echo "## 📊 Grading Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Estrai statistiche dal CSV
+            TOTAL=$(tail -n +2 reports/aggregate-report.csv | wc -l)
+            PASSED=$(tail -n +2 reports/aggregate-report.csv | awk -F',' '$4=="OK" && $5=="OK"' | wc -l)
+
+            echo "- **Total projects tested:** $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "- **Successfully compiled:** $PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Mostra tabella risultati (primi 20)
+            echo "### Top Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Student | Client | Server | Tests | Score | %" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|--------|--------|-------|-------|------|" >> $GITHUB_STEP_SUMMARY
+
+            tail -n +2 reports/aggregate-report.csv | head -20 | while IFS=',' read -r student repo clone client server cw sw tp tt score maxscore perc rest; do
+              echo "| $student | $client | $server | $tp/$tt | $score/$maxscore | $perc% |" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full reports available in artifacts." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No reports generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload individual reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: individual-reports
+          path: grading-tool/reports/*.json
+          retention-days: 30
+
+      - name: Upload aggregate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aggregate-reports
+          path: |
+            grading-tool/reports/aggregate-report.csv
+            grading-tool/reports/aggregate-report.html
+          retention-days: 90
+
+      - name: Upload grading logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grading-logs
+          path: |
+            grading-tool/grading.log
+            grading-tool/temp/**/*.log
+          retention-days: 7
+
+      - name: Comment on commit (if push event)
+        if: github.event_name == 'push' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            if (!fs.existsSync('grading-tool/reports/aggregate-report.csv')) {
+              return;
+            }
+
+            const csv = fs.readFileSync('grading-tool/reports/aggregate-report.csv', 'utf8');
+            const lines = csv.split('\n').filter(l => l.trim());
+            const total = lines.length - 1; // Escludi header
+
+            let passed = 0;
+            for (let i = 1; i < lines.length; i++) {
+              const cols = lines[i].split(',');
+              if (cols[3] === 'OK' && cols[4] === 'OK') passed++;
+            }
+
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = `## 🤖 Auto-Grading Results\n\n` +
+                         `- **Total projects:** ${total}\n` +
+                         `- **Successfully compiled:** ${passed} (${Math.round(passed/total*100)}%)\n\n` +
+                         `[View detailed reports](${runUrl})\n`;
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: body
+            });
+
+      - name: Fail if major issues
+        if: always()
+        run: |
+          cd grading-tool
+
+          # Conta quanti progetti hanno fallito il clone
+          if [ -f reports/aggregate-report.csv ]; then
+            FAILED_CLONE=$(tail -n +2 reports/aggregate-report.csv | awk -F',' '$3!="OK"' | wc -l)
+
+            if [ $FAILED_CLONE -gt 0 ]; then
+              echo "⚠️ Warning: $FAILED_CLONE projects failed to clone"
+              # Non fallire il workflow per problemi di clone
+            fi
+          fi

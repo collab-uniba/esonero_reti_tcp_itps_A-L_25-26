@@ -201,7 +201,7 @@ cat > "$HTML_FILE" <<'EOF'
 <body>
     <div class="container">
         <header>
-            <h1>📊 Report Correzione Automatica</h1>
+            <h1>📊 Report Correzione</h1>
             <p>Esonero Reti TCP - A.A. 2025-26</p>
         </header>
 

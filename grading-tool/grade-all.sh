@@ -67,6 +67,12 @@ START_TIME=$(date +%s)
 # Funzione per testare un singolo repository
 test_repository() {
     local repo_url=$1
+
+    # Normalizza URL: aggiungi .git se non presente
+    if [[ ! "$repo_url" =~ \.git$ ]]; then
+        repo_url="${repo_url}.git"
+    fi
+
     local student_id=$(basename "$repo_url" .git)
 
     # Se il repo URL contiene un identificativo studente, estrailo

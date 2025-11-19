@@ -59,6 +59,11 @@ Per risposte con errore (status != 0):
 - `Città non disponibile` (status = 1)
 - `Richiesta non valida` (status = 2)
 
+> [!WARNING]
+> - Il formato dell'output deve essere **ESATTAMENTE** come specificato di seguito
+> - **Lingua italiana obbligatoria** - NON tradurre in inglese o altre lingue
+->  **NO caratteri extra** (es. "Received result from server IP" invece di "Ricevuto risultato dal server ip")
+> - Gli **spazi e la punteggiatura** devono corrispondere esattamente agli esempi
 
 ### Funzioni di Generazione Dati
 
@@ -200,11 +205,13 @@ I nomi delle città sono case-insensitive.
    - `server.c`: Implementazione del server
    - `protocol.h`: Definizioni del protocollo condivise (file presente sia nel progetto client sia in quello server)
 
-3. **Portabilità**: Il codice deve compilare ed eseguire su Windows, Linux e macOS
+3. **Formato di output**: Il codice deve generare output esattamente come indicato nelle specifiche e negli esempi
 
-4. **Compatibilità Eclipse CDT**: Il codice deve funzionare in progetti Eclipse CDT
+4. **Portabilità**: Il codice deve compilare ed eseguire su Windows, Linux e macOS
 
-5. **Sicurezza della memoria**: Nessun buffer overflow, memory leak o comportamento indefinito
+6. **Compatibilità Eclipse CDT**: Il codice deve funzionare in progetti Eclipse CDT
+
+7. **Sicurezza della memoria**: Nessun buffer overflow, memory leak o comportamento indefinito
 
 
 ## Consegna
@@ -215,4 +222,4 @@ I nomi delle città sono case-insensitive.
 - **Note**:
    - Una sola consegna per coppia
  
-_Ver. 1.0.2_
+_Ver. 1.0.3_

@@ -205,9 +205,11 @@ I nomi delle città sono case-insensitive.
    - `server.c`: Implementazione del server
    - `protocol.h`: Definizioni del protocollo condivise (file presente sia nel progetto client sia in quello server)
 
-3. **Formato di output**: Il codice deve generare output esattamente come indicato nelle specifiche e negli esempi
+3. **Portabilità**: Il codice deve compilare ed eseguire su Windows, Linux e macOS
 
-4. **Portabilità**: Il codice deve compilare ed eseguire su Windows, Linux e macOS
+4. **Formato di output**: Il codice deve generare output esattamente come indicato nelle specifiche e negli esempi
+
+5. **Portabilità**: Il codice deve compilare ed eseguire su Windows, Linux e macOS
 
 6. **Compatibilità Eclipse CDT**: Il codice deve funzionare in progetti Eclipse CDT
 

@@ -64,7 +64,7 @@ Per risposte con errore (status != 0):
 > - **Lingua italiana obbligatoria** - NON tradurre in inglese o altre lingue
 ->  **NO caratteri extra** (es. "Received result from server IP" invece di "Ricevuto risultato dal server ip")
 > - Gli **spazi e la punteggiatura** devono corrispondere esattamente agli esempi
-> - La correzione copre entrambi i casi di spelling dei caratteri accentati (e.g., Umidita' e Umidità sono entrambi accettati)
+> - Sono accettati entrambi i casi di spelling dei **caratteri accentati** (e.g., Umidita' e Umidità sono entrambi accettati)
 
 ### Funzioni di Generazione Dati
 

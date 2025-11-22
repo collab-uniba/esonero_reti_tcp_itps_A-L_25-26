@@ -64,6 +64,7 @@ Per risposte con errore (status != 0):
 > - **Lingua italiana obbligatoria** - NON tradurre in inglese o altre lingue
 ->  **NO caratteri extra** (es. "Received result from server IP" invece di "Ricevuto risultato dal server ip")
 > - Gli **spazi e la punteggiatura** devono corrispondere esattamente agli esempi
+> - La correzione copre entrambi i casi di spelling dei caratteri accentati (e.g., Umidita' e Umidità sono entrambi accettati)
 
 ### Funzioni di Generazione Dati
 
@@ -231,4 +232,4 @@ I nomi delle città sono case-insensitive.
    - Non è necessario ricompilare il form di consegna dopo aggiornamenti al repository 
    - La pagina dei risultati si aggiorna ogni 2h
  
-_Ver. 1.0.5_
+_Ver. 1.0.6_
